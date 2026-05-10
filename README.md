@@ -43,14 +43,17 @@ The free tier costs the agent ~5-10 seconds of CPU time (SHA-256, default 14 lea
 
 ## Why this and not OAuth, API keys, or Stripe
 
-| Approach          | Per-call cost | Account required | Agent-friendly |
-|-------------------|---------------|------------------|-----------------|
-| API keys          | $0            | yes              | no              |
-| OAuth             | $0            | yes              | no              |
-| Stripe metering   | high overhead | yes              | no              |
-| **PoW + L402**    | seconds or 3 sats | **no**       | **yes**         |
+| Approach                  | Per-call cost      | Account required | Self-hosted | Agent-friendly |
+|---------------------------|--------------------|------------------|-------------|----------------|
+| API keys                  | $0                 | yes              | n/a         | no             |
+| OAuth                     | $0                 | yes              | n/a         | no             |
+| Stripe metering           | high overhead      | yes              | n/a         | no             |
+| Managed MCP auth platform | 100–2000 sats      | no               | no          | yes            |
+| **PoW + L402 (this)**     | seconds or 3 sats  | **no**           | **yes**     | **yes**        |
 
 Agents do not have email addresses. They do not click confirmation links. They do not enter credit cards. PoW + Lightning is the only auth primitive that works for fully autonomous callers.
+
+Managed MCP auth platforms work, but they charge 100–2000 sats per call on vendor infrastructure — your revenue flows through their rails. This package runs on your server, your Lightning node, your keys. You keep the sats.
 
 ## Configuration
 
