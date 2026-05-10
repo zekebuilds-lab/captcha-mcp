@@ -4,7 +4,7 @@
 
 OpenAI's Sora API does not let you charge per call. Anthropic's billing does not pass through to your tools. If you ship an MCP server today and an autonomous agent finds it, you eat the bill.
 
-This is the gate. Three tools over stdio. Stdlib only.
+This is the gate. Three tools over stdio or HTTP. Stdlib only.
 
 ## Quickstart
 
@@ -62,6 +62,37 @@ Set `CAPTCHA_URL` to point at a different captcha backend. Default is `http://lo
 ```bash
 CAPTCHA_URL=https://captcha.powforge.dev npx @powforge/captcha-mcp
 ```
+
+## HTTP Streamable transport
+
+Hosted MCP clients (Smithery, browser-based hosts) need HTTP, not stdio. Pass `--http` or set `HTTP_MODE=1`:
+
+```bash
+HTTP_MODE=1 PORT=3200 npx @powforge/captcha-mcp
+# or
+npx @powforge/captcha-mcp --http
+```
+
+The server then listens on:
+
+| Endpoint     | Method | Purpose                                                                        |
+|--------------|--------|--------------------------------------------------------------------------------|
+| `/mcp`       | POST   | Single JSON-RPC request, single JSON-RPC response. Notifications return 202.   |
+| `/mcp`       | GET    | SSE stream for server-pushed notifications (kept open with a 25s heartbeat).  |
+| `/health`    | GET    | Liveness probe — returns `{ok, server, transport}`. Not part of MCP.           |
+
+Stateless. No session ids. CORS open (`Access-Control-Allow-Origin: *`) so browser clients work. Stdio mode is unchanged and remains the default — `npx @powforge/captcha-mcp` with no flag still talks JSON-RPC over stdin/stdout.
+
+Smoke test the HTTP transport:
+
+```bash
+HTTP_MODE=1 PORT=3200 node src/server.js &
+curl -X POST http://localhost:3200/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}'
+```
+
+Returns `{jsonrpc:"2.0", id:1, result:{protocolVersion:"2024-11-05", capabilities:{tools:{}}, serverInfo:{...}}}`.
 
 ## Local development
 
