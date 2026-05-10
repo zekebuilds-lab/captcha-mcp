@@ -1,0 +1,48 @@
+{
+  "name": "@powforge/captcha-mcp",
+  "version": "0.1.1",
+  "mcpName": "io.github.zekebuilds-lab/captcha-mcp",
+  "description": "MCP server that turns PowForge pow-captcha into agent auth. Charge AI agents per-call without accounts: PoW solve = free tier, Lightning payment = paid tier. Three tools: challenge, verify, status. Stdio transport, stdlib only — no MCP SDK dependency.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "modelcontextprotocol",
+    "claude",
+    "ai",
+    "agent",
+    "agent-auth",
+    "captcha",
+    "proof-of-work",
+    "lightning",
+    "l402",
+    "rate-limiting",
+    "anti-bot",
+    "powforge"
+  ],
+  "main": "src/index.js",
+  "bin": {
+    "captcha-mcp": "src/server.js"
+  },
+  "scripts": {
+    "test": "node --test tests/server.test.js",
+    "start": "node src/server.js"
+  },
+  "license": "MIT",
+  "author": "PowForge",
+  "homepage": "https://powforge.dev/captcha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zekebuilds-lab/captcha-mcp"
+  },
+  "bugs": {
+    "url": "https://powforge.dev"
+  },
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
