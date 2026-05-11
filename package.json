@@ -25,7 +25,7 @@
     "captcha-mcp": "src/server.js"
   },
   "scripts": {
-    "test": "node --test tests/server.test.js tests/http-transport.test.js",
+    "test": "node --test tests/server.test.js tests/http-transport.test.js tests/rune-fairlaunch.test.js",
     "start": "node src/server.js",
     "start:http": "node src/server.js --http"
   },
