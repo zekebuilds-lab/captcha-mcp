@@ -48,6 +48,6 @@
   },
   "dependencies": {
     "@magiceden-oss/runestone-lib": "^1.0.2",
-    "@scure/btc-signer": "^2.2.0"
+    "@scure/btc-signer": "^1.8.1"
   }
 }
