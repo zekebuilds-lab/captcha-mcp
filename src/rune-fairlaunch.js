@@ -1,35 +1,46 @@
 /**
- * @powforge/captcha-mcp — Rune PoW Fair-Launch Scaffold
+ * @powforge/captcha-mcp — Rune PoW Fair-Launch (Phase 2: Runestone encoding)
  *
- * Tick 544, build/141 (research/rune-pow-fairlaunch-design.md).
+ * Tick 545, build/141 phase 2 (research/rune-pow-fairlaunch-design.md).
  *
  * Off-chain enforcement model: PowForge etches a Rune with premine = total
  * supply, then gates transfers behind the existing pow-captcha PoW challenge.
- * Solve the PoW, supply a Bitcoin recipient address, get back a signed Rune
- * transfer transaction (or a PSBT to sign yourself).
+ * Solve the PoW, supply a Bitcoin recipient address, get back a Runestone
+ * OP_RETURN payload + transfer template the caller can broadcast (PSBT flow
+ * lands phase 3 once relay UTXO cursor is wired up).
  *
- * This file is the **scaffold** — it does NOT yet construct real Bitcoin
- * transactions. It validates the input contract, gates on PoW verification
- * via the existing captcha-mcp verify() handler, enforces the per-address
- * 24h rate limit, and returns a structured "coming-soon" stub that documents
- * the missing pieces (runestone-lib install + relay key + ord indexer).
+ * What Phase 2 ships:
+ *   • encodeRunestoneEdict({ runeId, amount, output }) -> Buffer of the
+ *     OP_RETURN scriptpubkey (6a 5d <varint-encoded edict>).
+ *   • encodeRunestoneEtching(spec) -> { scriptpubkey, commitment } for the
+ *     POWFORGE•PROOF etching tx.
+ *   • claim() now returns a real `runestone_scriptpubkey` hex (from
+ *     @magiceden-oss/runestone-lib) plus the transfer-tx template fields the
+ *     caller (or phase-3 broadcaster) needs to finalize the tx.
  *
- * The route shape, return contract, error codes, and rate-limit semantics are
- * STABLE. The next tick swaps the stub body for real tx construction without
- * changing the API surface. Phase 1 = local-regtest validation. Phase 2 = signet.
- * Phase 3 = mainnet (Fubz-gated).
+ * What Phase 3 will add (NOT in this file):
+ *   • Relay UTXO cursor (chain forward each claim's leftover balance).
+ *   • bitcoinjs-lib PSBT assembly + relay signature.
+ *   • Broadcast endpoint hitting lightning.lan:8332 sendrawtransaction.
+ *
+ * The route shape, return contract, error codes, and rate-limit semantics from
+ * the Phase-1 scaffold are STABLE. Phase 2 enriches the response with real
+ * Runestone bytes; it does not change error codes or status semantics.
  */
 
 'use strict';
 
 const crypto = require('crypto');
 const { verify: captchaVerify } = require('./index.js');
+const { encodeRunestone } = require('@magiceden-oss/runestone-lib');
 
 // =============================================================================
 // CONSTANTS — match design doc §"Rune configuration"
 // =============================================================================
 
 const RUNE_NAME = 'POWFORGE•PROOF';
+const RUNE_RAW_NAME = 'POWFORGEPROOF';      // dots stripped — etcher spec
+const RUNE_SPACERS = [8];                    // bitfield: spacer between POWFORGE and PROOF
 const RUNE_SYMBOL = '⚒';
 const RUNE_DIVISIBILITY = 0;
 const RUNE_TOTAL_SUPPLY = 21_000_000;
@@ -38,6 +49,20 @@ const RUNE_PARCEL_COUNT = RUNE_TOTAL_SUPPLY / RUNE_PARCEL_SIZE; // 21,000
 
 // Per-recipient rate limit: 1 claim per address per 24h
 const CLAIM_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
+
+// Default rune location to use for transfer edicts until the live etch is
+// performed on signet/mainnet. Tests assert this is overrideable via env so
+// CI never needs a real on-chain etch. Format: <block>:<tx>.
+function getRuneId() {
+  const raw = process.env.POWFORGE_RUNE_ID;
+  if (raw && /^\d+:\d+$/.test(raw)) {
+    const [block, tx] = raw.split(':');
+    return { block: BigInt(block), tx: Number(tx) };
+  }
+  // Sentinel rune id used for scaffold tests + Phase-2 encoding round-trips.
+  // Replaced with real (block, tx) of the etching tx on signet/mainnet.
+  return { block: 840000n, tx: 1 };
+}
 
 // In-memory claim ledger (PRODUCTION: persist to data/rune-claims.jsonl).
 // Maps recipient_address -> { claimed_at_ms, parcel_id, txid|null }
@@ -63,6 +88,66 @@ function looksLikeBitcoinMainnetAddress(addr) {
   // P2SH: starts with 3
   if (/^3[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(addr)) return true;
   return false;
+}
+
+// =============================================================================
+// RUNESTONE ENCODING (Phase 2)
+// =============================================================================
+
+/**
+ * Encode a single-edict Rune transfer payload — the OP_RETURN scriptpubkey
+ * that pays `amount` units of `runeId` to transaction output `output`.
+ *
+ * Returns a Buffer of the full scriptpubkey: `OP_RETURN(0x6a) + OP_13(0x5d)
+ * + push(length) + varint-encoded edict tuple`. This is exactly what the
+ * indexer (ord, magic eden's runestone-lib decoder, runelib) parses to assign
+ * Rune balances post-confirmation.
+ *
+ * The bytes round-trip through `tryDecodeRunestone` from the same library —
+ * tests assert the decoded edicts match what we encoded.
+ *
+ * @param {object} args
+ * @param {{block: bigint, tx: number}} args.runeId  Rune location (block:tx of etch).
+ * @param {bigint|number} args.amount                Units to transfer.
+ * @param {number} args.output                       Output index that receives the rune.
+ * @returns {Buffer}                                 Full scriptpubkey bytes.
+ */
+function encodeRunestoneEdict({ runeId, amount, output }) {
+  if (!runeId || typeof runeId.block !== 'bigint' || typeof runeId.tx !== 'number') {
+    throw new Error('encodeRunestoneEdict: runeId must be { block: bigint, tx: number }');
+  }
+  if (amount == null) throw new Error('encodeRunestoneEdict: amount required');
+  if (output == null || output < 0) throw new Error('encodeRunestoneEdict: output index required');
+  const amt = typeof amount === 'bigint' ? amount : BigInt(amount);
+  const { encodedRunestone } = encodeRunestone({
+    edicts: [{ id: runeId, amount: amt, output: Number(output) }],
+  });
+  return encodedRunestone;
+}
+
+/**
+ * Encode the POWFORGE•PROOF etching scriptpubkey. One-shot — used once at
+ * launch to mint the entire premine to the relay's address.
+ *
+ * Returns the scriptpubkey Buffer AND the etching commitment (Buffer of the
+ * rune-name commitment that must appear in a witness of the etching tx per
+ * the Runes spec — `tryDecodeRunestone` verifies this commitment on indexers).
+ *
+ * @param {object} [overrides]  Optional fields for testing variants.
+ * @returns {{ scriptpubkey: Buffer, commitment: Buffer|undefined }}
+ */
+function encodeRunestoneEtching(overrides = {}) {
+  const spec = {
+    etching: {
+      runeName: overrides.runeName || RUNE_RAW_NAME,
+      divisibility: overrides.divisibility ?? RUNE_DIVISIBILITY,
+      premine: overrides.premine != null ? BigInt(overrides.premine) : BigInt(RUNE_TOTAL_SUPPLY),
+      symbol: overrides.symbol || RUNE_SYMBOL,
+      spacers: overrides.spacers || RUNE_SPACERS,
+    },
+  };
+  const { encodedRunestone, etchingCommitment } = encodeRunestone(spec);
+  return { scriptpubkey: encodedRunestone, commitment: etchingCommitment };
 }
 
 // =============================================================================
@@ -97,8 +182,8 @@ function info() {
       claims_remaining: Math.max(0, RUNE_PARCEL_COUNT - parcelsClaimed),
       rate_limit: '1 claim per recipient address per 24h',
     },
-    status: 'scaffold',
-    next_milestone: 'phase-1 regtest validation — see research/rune-pow-fairlaunch-design.md',
+    status: 'phase-2-encoding',
+    next_milestone: 'phase-3: relay UTXO cursor + PSBT signing + signet broadcast — see research/rune-pow-fairlaunch-design.md',
     fairness_note:
       'This is off-chain enforcement. PowForge holds the keys and gates transfers behind PoW. ' +
       'Anyone who controls the relay key could bypass the PoW barrier. ' +
@@ -205,47 +290,64 @@ async function claim(input, opts = {}) {
   // chained transfer ledger. Here we just bump an in-memory counter.
   const parcel_id = parcelsClaimed + 1;
 
-  // SCAFFOLD STUB — in production this section calls into runestone-lib:
-  //
-  //   const { encodeRunestone } = require('@magiceden-oss/runestone-lib');
-  //   const psbt = buildClaimPsbt({
-  //     relay_utxo: relayCursor.next(),
-  //     rune_id: RUNE_ID,
-  //     amount: RUNE_PARCEL_SIZE,
-  //     recipient: recipient_address,
-  //     relay_change_address: RELAY_ADDRESS,
-  //     fee_rate_sat_vb: feeRate,
-  //   });
-  //   return { txhex: psbt.toHex(), txid_will_be: ..., parcel_id, ... };
-  //
-  // Until then, return a stub that documents the missing pieces.
+  // Phase 2: build the real Runestone OP_RETURN scriptpubkey via
+  // @magiceden-oss/runestone-lib. The edict sends RUNE_PARCEL_SIZE units of
+  // POWFORGE•PROOF to output 0 (the claimer's address). The remainder of the
+  // relay balance lands on output 1 (the relay change address) once Phase 3
+  // wires the UTXO cursor.
+  const runeId = (opts.runeId && typeof opts.runeId === 'object') ? opts.runeId : getRuneId();
+  let runestoneScriptpubkey;
+  try {
+    runestoneScriptpubkey = encodeRunestoneEdict({
+      runeId,
+      amount: RUNE_PARCEL_SIZE,
+      output: 0,
+    });
+  } catch (e) {
+    return {
+      error: 'runestone_encoding_failed',
+      reason: e.message,
+      hint: 'Internal: failed to encode the Runestone OP_RETURN. Report this — should never happen on valid input.',
+    };
+  }
 
   parcelsClaimed += 1;
   claimsByAddress.set(recipient_address, {
     claimed_at_ms: now,
     parcel_id,
-    txid: null, // populated once Phase 2 wires the real tx
+    txid: null, // populated once Phase 3 wires broadcast
   });
 
   return {
-    status: 'coming-soon',
+    status: 'runestone-ready',
     parcel_id,
     parcel_size: RUNE_PARCEL_SIZE,
     rune: RUNE_NAME,
+    rune_id: { block: runeId.block.toString(), tx: runeId.tx },
     recipient_address,
     pow_verified: true,
     pow_method: pow.method || 'pow',
-    pow_token: pow.token, // pass through the captcha token in case caller wants to verify independently
-    next_response_shape: {
-      status: 'signed',
-      txhex: '<hex-encoded signed Bitcoin transaction>',
-      txid_will_be: '<32-byte sha256d of tx>',
-      psbt: '<base64 PSBT (alternative path — claimer signs and broadcasts)>',
-      runestone_payload: { edicts: [{ rune_id: '<block:tx>', amount: RUNE_PARCEL_SIZE, output: 0 }] },
-      broadcast_endpoint: '/rune/broadcast (optional upsell tier, 21 sats L402)',
+    pow_token: pow.token, // pass through the captcha token so caller can verify independently
+    // Phase 2 deliverable: real Runestone bytes the caller (or phase-3 relay)
+    // can drop straight into a Bitcoin transaction.
+    runestone: {
+      scriptpubkey_hex: runestoneScriptpubkey.toString('hex'),
+      scriptpubkey_len: runestoneScriptpubkey.length,
+      edicts: [
+        { rune_id: `${runeId.block}:${runeId.tx}`, amount: RUNE_PARCEL_SIZE, output: 0 },
+      ],
     },
-    library_pending: '@magiceden-oss/runestone-lib (npm) — install in tick T+1',
-    relay_key_pending: 'mainnet relay multisig — Fubz-gated, see design doc Risks §1',
+    transfer_tx_template: {
+      // Caller assembles a tx with these outputs in order. Outputs 0 and 1 are
+      // dust (546 sats minimum standardness). Output 2 carries the Runestone.
+      outputs: [
+        { description: 'dust to claimer (receives 1,000 RUNE via edict)', address: recipient_address, value_sats: 546 },
+        { description: 'dust to relay change (receives the remainder)', address: '<relay_change_address>', value_sats: 546 },
+        { description: 'OP_RETURN Runestone', scriptpubkey_hex: runestoneScriptpubkey.toString('hex'), value_sats: 0 },
+      ],
+      relay_input_needed: true,
+      next_step: 'Phase 3 wires the relay UTXO cursor + PSBT signing. For now, callers can broadcast this Runestone in their own tx structure if they have a runestone-aware wallet.',
+    },
     design_doc: 'research/rune-pow-fairlaunch-design.md',
     claims_total: parcelsClaimed,
     claims_remaining: RUNE_PARCEL_COUNT - parcelsClaimed,
@@ -269,11 +371,17 @@ module.exports = {
   info,
   challenge,
   claim,
+  // Phase-2 encoding primitives
+  encodeRunestoneEdict,
+  encodeRunestoneEtching,
   // private but exposed for tests
   _resetForTests,
   _looksLikeBitcoinMainnetAddress: looksLikeBitcoinMainnetAddress,
+  _getRuneId: getRuneId,
   // constants
   RUNE_NAME,
+  RUNE_RAW_NAME,
+  RUNE_SPACERS,
   RUNE_SYMBOL,
   RUNE_DIVISIBILITY,
   RUNE_TOTAL_SUPPLY,

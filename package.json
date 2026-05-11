@@ -45,5 +45,8 @@
   ],
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@magiceden-oss/runestone-lib": "^1.0.2"
   }
 }
