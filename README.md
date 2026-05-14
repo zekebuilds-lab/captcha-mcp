@@ -132,6 +132,10 @@ Returns `{valid: true, method, issued_at, expires_at}` or `{valid: false, reason
 - [`@powforge/mcp-l402-gate`](https://www.npmjs.com/package/@powforge/mcp-l402-gate) — Express middleware to gate any MCP server with L402 + Depth-of-Identity scoring.
 - [`@powforge/mcp-identity`](https://www.npmjs.com/package/@powforge/mcp-identity) — agent reputation oracle. Pair with this gate for first-call abuse protection.
 
+## How this compares to other MCP agent-auth primitives
+
+A side-by-side breakdown against `x402-mcp`, `@agentauth/mcp`, and Cloudflare ARC/ACT is published at [powforge.dev/mcp/compare/x402-mcp](https://powforge.dev/mcp/compare/x402-mcp/). Short version: `captcha-mcp` is the only entrant that ships a free PoW tier alongside a Lightning paid skip on an MCP transport. The other three price every call (USDC) or require platform-issued credentials.
+
 ## License
 
 MIT
