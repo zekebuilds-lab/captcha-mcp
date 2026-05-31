@@ -2,7 +2,7 @@
   "name": "@powforge/captcha-mcp",
   "version": "0.2.0",
   "mcpName": "io.github.zekebuilds-lab/captcha-mcp",
-  "description": "MCP server that turns PowForge pow-captcha into agent auth. Charge AI agents per-call without accounts: PoW solve = free tier, Lightning payment = paid tier. Three tools: challenge, verify, status. Stdio + HTTP Streamable transports, stdlib only — no MCP SDK dependency.",
+  "description": "Stop your MCP server returning 429 to agents. PoW puzzle (free, ~5s CPU) or Lightning invoice — machine-readable backoff an agent can satisfy without an account. Three tools: challenge, verify, status. Stdio + HTTP transports, stdlib only.",
   "keywords": [
     "mcp",
     "mcp-server",
@@ -17,6 +17,9 @@
     "lightning",
     "l402",
     "rate-limiting",
+    "rate-limit-replacement",
+    "429",
+    "backoff",
     "anti-bot",
     "powforge"
   ],

@@ -1,8 +1,8 @@
 # @powforge/captcha-mcp
 
-**Charge AI agents per-call without accounts.** PoW solve = free tier. Lightning payment = paid tier.
+**Stop your MCP server returning 429 to agents.** Hand them a proof-of-work puzzle (free, ~5s of CPU) or a 3-sat Lightning invoice instead — both are machine-readable backoff signals an autonomous agent can satisfy without an account, email, or API key.
 
-OpenAI's Sora API does not let you charge per call. Anthropic's billing does not pass through to your tools. If you ship an MCP server today and an autonomous agent finds it, you eat the bill.
+OpenAI's Sora API does not let you charge per call. Anthropic's billing does not pass through to your tools. If you ship an MCP server today and an autonomous agent finds it, you eat the bill. When it hits your rate limit, it crashes with a 429 and no way to back off gracefully.
 
 This is the gate. Three tools over stdio or HTTP. Stdlib only.
 
