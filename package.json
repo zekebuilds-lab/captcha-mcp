@@ -1,6 +1,6 @@
 {
   "name": "@powforge/captcha-mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "mcpName": "io.github.zekebuilds-lab/captcha-mcp",
   "description": "Replace MCP 429 errors with PoW challenges or Lightning micropayments. Drop-in rate control for MCP servers — no accounts, free fallback, self-hosted. Three tools: challenge, verify, status. Stdio + HTTP transports, stdlib only.",
   "keywords": [
