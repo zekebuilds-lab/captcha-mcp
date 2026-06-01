@@ -1,10 +1,18 @@
 # @powforge/captcha-mcp
 
-**Stop your MCP server returning 429 to agents.** Hand them a proof-of-work puzzle (free, ~5s of CPU) or a 3-sat Lightning invoice instead — both are machine-readable backoff signals an autonomous agent can satisfy without an account, email, or API key.
+**Your MCP server returns 429 when agents pound it. captcha-mcp makes them earn their next call instead.** Hand the agent a proof-of-work puzzle (free, ~5s of CPU) or a 3-sat Lightning invoice — both are machine-readable backoff signals an autonomous caller can satisfy without an account, email, or API key.
 
-OpenAI's Sora API does not let you charge per call. Anthropic's billing does not pass through to your tools. If you ship an MCP server today and an autonomous agent finds it, you eat the bill. When it hits your rate limit, it crashes with a 429 and no way to back off gracefully.
+Three tools over stdio or HTTP. Stdlib only. No signup, free fallback, self-hosted, no revenue share.
 
-This is the gate. Three tools over stdio or HTTP. Stdlib only.
+## Why not 429?
+
+429 Too Many Requests is the wrong shape for the agent era. Three patterns recur across MCP server reports:
+
+- **Agent frameworks treat 429 as a connection failure.** They retry immediately, often with exponential backoff that is still too aggressive, and amplify the overload that triggered the limit in the first place.
+- **There is no per-caller signal.** A 429 fires for the bucket, not the agent. One noisy caller gets every other caller throttled, and the server has no way to ask the noisy one to slow down specifically.
+- **Retry-After is advisory and frequently ignored.** Agents do not consistently parse it, do not consistently respect it, and have no incentive to wait — the cost of retrying is zero.
+
+captcha-mcp replaces the 429 with a 402-style challenge. The next call costs the caller something (CPU seconds or 3 sats). That cost is per-caller, machine-readable, and self-throttling — an agent that cannot solve the puzzle cannot flood the endpoint.
 
 ## Quickstart
 
@@ -12,7 +20,7 @@ This is the gate. Three tools over stdio or HTTP. Stdlib only.
 npx -y @powforge/captcha-mcp
 ```
 
-That is it. No install, no config, no API key. The server starts on stdio and waits for an MCP client.
+No install, no config, no API key. The server starts on stdio and waits for an MCP client.
 
 To wire it into Claude Code, Cursor, or any MCP-compatible host, add to your config:
 
