@@ -198,6 +198,19 @@ const TOOLS = [
       properties: {},
       additionalProperties: false,
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Unique challenge id signed by the server' },
+        salt: { type: 'string', description: 'Hex salt for the SHA-256 PoW' },
+        difficulty: { type: 'number', description: 'Leading zero bits required (e.g. 14)' },
+        algo: { type: 'string', description: "Hash algorithm, always 'sha256'" },
+        signature: { type: 'string', description: 'Server-issued HMAC binding challenge to id' },
+        instructions: { type: 'string', description: 'Human-readable solve instructions for the agent' },
+        error: { type: 'string', description: 'Present only on error' },
+        hint: { type: 'string', description: 'Additional hint on error' },
+      },
+    },
     handler: challenge,
   },
   {
@@ -217,6 +230,19 @@ const TOOLS = [
       required: ['salt', 'nonce', 'id', 'signature'],
       additionalProperties: false,
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean', description: 'True if the PoW solution was accepted' },
+        token: { type: 'string', description: 'HMAC-signed access token valid for 300 seconds (on success)' },
+        method: { type: 'string', description: "'pow' or 'sha256'" },
+        expires_in_sec: { type: 'number', description: 'Token lifetime in seconds (300)' },
+        verify_endpoint: { type: 'string', description: 'URL for backend-side token verification' },
+        hint: { type: 'string', description: 'Usage hint for the verify endpoint' },
+        reason: { type: 'string', description: 'Failure reason (on invalid solutions)' },
+        error: { type: 'string', description: 'Error code (on transport/input errors)' },
+      },
+    },
     handler: verify,
   },
   {
@@ -227,6 +253,33 @@ const TOOLS = [
       type: 'object',
       properties: {},
       additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ok: { type: 'boolean', description: 'True if the captcha backend is reachable' },
+        captcha_url: { type: 'string', description: 'Resolved captcha backend URL' },
+        stats: {
+          type: 'object',
+          description: 'Lifetime counters',
+          properties: {
+            pow_solves: { type: 'number' },
+            ln_skips: { type: 'number' },
+            challenges_issued: { type: 'number' },
+          },
+        },
+        l402: {
+          type: 'object',
+          description: 'L402 Lightning skip endpoint (null if L402 not configured)',
+          properties: {
+            scope: { type: 'string' },
+            price_sats: { type: 'number' },
+            endpoint: { type: 'string' },
+            note: { type: 'string' },
+          },
+        },
+        error: { type: 'string', description: 'Error code when ok is false' },
+      },
     },
     handler: status,
   },

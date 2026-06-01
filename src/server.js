@@ -119,11 +119,11 @@ async function handle(req) {
 
   if (method === 'tools/list') {
     return makeResult(id, {
-      tools: TOOLS.map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema,
-      })),
+      tools: TOOLS.map((t) => {
+        const entry = { name: t.name, description: t.description, inputSchema: t.inputSchema };
+        if (t.outputSchema) entry.outputSchema = t.outputSchema;
+        return entry;
+      }),
     });
   }
 

@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.zekebuilds-lab/captcha-mcp",
-  "description": "Charge AI agents per-call without accounts. PoW solve = free tier, Lightning = paid tier.",
+  "description": "Charge AI agents per-call without accounts. PoW solve = free tier, Lightning = paid tier. Three tools: challenge, verify, status. Stdio + HTTP Streamable transports, stdlib only.",
   "repository": {
     "url": "https://github.com/zekebuilds-lab/captcha-mcp",
     "source": "github"
   },
-  "version": "0.1.1",
+  "version": "0.2.2",
   "websiteUrl": "https://powforge.dev/captcha",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@powforge/captcha-mcp",
-      "version": "0.1.1",
+      "version": "0.2.2",
       "transport": {
         "type": "stdio"
       },
@@ -26,6 +26,12 @@
           "default": "https://captcha.powforge.dev"
         }
       ]
+    }
+  ],
+  "remotes": [
+    {
+      "transportType": "http",
+      "url": "https://captcha.powforge.dev/mcp"
     }
   ]
 }
