@@ -1,6 +1,6 @@
 {
   "name": "@powforge/captcha-mcp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "mcpName": "io.github.zekebuilds-lab/captcha-mcp",
   "description": "Stop your MCP server returning 429 to agents. PoW puzzle (free, ~5s CPU) or Lightning invoice — machine-readable backoff an agent can satisfy without an account. Three tools: challenge, verify, status. Stdio + HTTP transports, stdlib only.",
   "keywords": [

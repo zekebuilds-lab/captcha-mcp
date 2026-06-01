@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.3 — 2026-06-01
+
+MCP 2025 spec compliance — outputSchema + server.json corrections.
+
+- Added `outputSchema` to all three tools (challenge, verify, status) per MCP 2025 spec. Directories and hosts that validate schema completeness (Glama, MCPpedia) will now score higher.
+- `server.js` tools/list response now includes `outputSchema` when defined.
+- Bumped `server.json` version 0.1.1 → 0.2.2 (was stale by two minor versions).
+- Added `remotes` entry to `server.json` pointing at the live HTTP Streamable endpoint (`captcha.powforge.dev/mcp`).
+- Fixed README smoke-test version reference (0.1.0 → 0.2.2).
+
 ## 0.1.1 — 2026-05-10
 
 Discoverability — npm metadata only, no behavior change.
