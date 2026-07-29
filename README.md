@@ -120,7 +120,7 @@ Smoke-test the protocol manually:
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' | node src/server.js
 ```
 
-You should see a JSON response with `serverInfo: { name: "@powforge/captcha-mcp", version: "0.2.2" }`.
+You should see a JSON response with `serverInfo: { name: "@powforge/captcha-mcp", version: "0.2.4" }`.
 
 ## Token verification from your own backend
 
@@ -142,7 +142,24 @@ Returns `{valid: true, method, issued_at, expires_at}` or `{valid: false, reason
 
 ## How this compares to other MCP agent-auth primitives
 
-A side-by-side breakdown against `x402-mcp`, `@agentauth/mcp`, and Cloudflare ARC/ACT is published at [powforge.dev/mcp/compare/x402-mcp](https://powforge.dev/mcp/compare/x402-mcp/). Short version: `captcha-mcp` is the only entrant that ships a free PoW tier alongside a Lightning paid skip on an MCP transport. The other three price every call (USDC) or require platform-issued credentials.
+The gate-the-MCP-server space is filling up. Here is the honest landscape, ranked by how directly each tool overlaps with what `captcha-mcp` does.
+
+| Tool | Payment rail | Auth model | Self-host | Free PoW tier | No account to pay |
+|------|--------------|------------|-----------|---------------|-------------------|
+| **PayGated** | Stripe credits | API key + OAuth 2.1 + PKCE + M2M | yes (MIT) | no | no (Stripe customer record per caller) |
+| **APort** | none disclosed | W3C verifiable creds, pre-tool hook | design-partner | no | n/a (audits, does not charge) |
+| **AgentSign** | none disclosed | Ed25519 signed passport + trust gate | unknown | no | n/a |
+| **x402-mcp** | USDC on-chain | wallet signature | yes | no | no (needs funded wallet) |
+| **Managed MCP auth** (Auth0 for AI, MintMCP) | SaaS | OAuth 2.0 / SAML / SSO | no | no | no |
+| **captcha-mcp (this)** | Lightning (L402) | PoW gate + L402 skip + free-tier | **yes** | **yes** | **yes** |
+
+**PayGated is the closest collision.** Same "monetize MCP tools per call" pitch, same self-host + open-source posture, but it settles on Stripe. That means you need a Stripe account in good standing (KYC, a bank, a supported country) to collect, and every caller needs a Stripe customer record before it can pay you a cent. `captcha-mcp`'s differentiator is the no-account path: a non-US agent author pays 3 sats per call in about 200ms with no KYC, or solves a free PoW puzzle if it will not pay at all.
+
+**APort and AgentSign sit at a different layer.** They record who used a tool under what authority; they do not price the call. They compose with a gate like this one rather than replace it.
+
+**None of them price the act of interacting.** Every other row assumes the caller is already an authorized identity and meters or audits after that. The PoW tier here is the only mechanism in the table that puts a cost on the interaction itself, not on the identity of the actor. That is the position this package defends.
+
+A longer breakdown against `x402-mcp`, `@agentauth/mcp`, and Cloudflare ARC/ACT is at [powforge.dev/mcp/compare/x402-mcp](https://powforge.dev/mcp/compare/x402-mcp/).
 
 ## License
 
