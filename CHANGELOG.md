@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.5 — 2026-08-09
+
+Version metadata reconciliation — no behavior change.
+
+- Fixed version drift across the package. The live 0.2.4 npm release reported `serverInfo.version: "0.2.0"` from `src/server.js`, while `server.json` was pinned at `0.2.2` and the README smoke-test told readers to expect `0.2.4`. A user following the local-dev smoke test saw a version string that matched neither the README nor npm.
+- `src/server.js` `SERVER_INFO.version` 0.2.0 → 0.2.5.
+- `server.json` version (both root and packages entry) 0.2.2 → 0.2.5.
+- README local-dev smoke-test expected `serverInfo.version` 0.2.4 → 0.2.5.
+- All four version surfaces (package.json, server.js, server.json, README) now agree.
+
 ## 0.2.3 — 2026-06-01
 
 MCP 2025 spec compliance — outputSchema + server.json corrections.

@@ -6,13 +6,13 @@
     "url": "https://github.com/zekebuilds-lab/captcha-mcp",
     "source": "github"
   },
-  "version": "0.2.2",
+  "version": "0.2.5",
   "websiteUrl": "https://powforge.dev/captcha",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@powforge/captcha-mcp",
-      "version": "0.2.2",
+      "version": "0.2.5",
       "transport": {
         "type": "stdio"
       },

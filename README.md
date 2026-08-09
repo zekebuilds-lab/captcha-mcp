@@ -120,7 +120,7 @@ Smoke-test the protocol manually:
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' | node src/server.js
 ```
 
-You should see a JSON response with `serverInfo: { name: "@powforge/captcha-mcp", version: "0.2.4" }`.
+You should see a JSON response with `serverInfo: { name: "@powforge/captcha-mcp", version: "0.2.5" }`.
 
 ## Token verification from your own backend
 

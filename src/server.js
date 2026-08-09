@@ -35,7 +35,7 @@ const { TOOLS } = require('./index.js');
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_INFO = {
   name: '@powforge/captcha-mcp',
-  version: '0.2.0',
+  version: '0.2.5',
 };
 
 // --install: print a ready-to-paste MCP config block. We don't write to the
